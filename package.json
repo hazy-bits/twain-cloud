@@ -7,10 +7,10 @@
     "test": "mocha test",
     "start": "serverless offline start",
     "build": "serverless deploy -n",
-    "deploy-dev": "serverless deploy --deployment develop --stage dev",
-    "deploy-prod": "serverless deploy --deployment develop --stage prod",
-    "release-dev": "serverless deploy --deployment public --stage dev",
-    "release-prod": "serverless deploy --deployment public --stage prod"
+    "deploy-private-dev": "serverless deploy --deployment private --stage dev",
+    "deploy-private-prod": "serverless deploy --deployment private --stage prod",
+    "deploy-public-dev": "serverless deploy --deployment public --stage dev",
+    "deploy-public-prod": "serverless deploy --deployment public --stage prod"
   },
   "repository": {
     "type": "git",
