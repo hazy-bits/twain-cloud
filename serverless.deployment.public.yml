@@ -1,4 +1,11 @@
-TWAIN_WEB: https://twain.hazybits.com
+# This file contains settings required to deploy TWAIN Cloud
+# to public HazyBits AWS infrastructure (https://twain.hazybits.com).
+#
+# Do NOT change this file.
+#
+# To setup your own TWAIN Cloud environment, update 'serverless.deployment.private.yml'
+
+TWAIN_WEB: https://twain.hazybits.com/${self:provider.stage}
 TWAIN_API: https://api-twain.hazybits.com/${self:provider.stage}
 
 TWAIN_IOT_ENDPOINT: ${ssm:/twain/aws/iot-endpoint}
@@ -7,3 +14,5 @@ PROVIDER_FACEBOOK_ID: ${ssm:/twain/auth/facebook/id}
 PROVIDER_FACEBOOK_SECRET: ${ssm:/twain/auth/facebook/secret}
 PROVIDER_GOOGLE_ID: ${ssm:/twain/auth/google/id}
 PROVIDER_GOOGLE_SECRET: ${ssm:/twain/auth/google/secret}
+
+ACCESS_TOKEN_SECRET: ${ssm:/twain/auth/token-secret}

@@ -26,17 +26,17 @@ module.exports.handler = apiGatewayHandler((event, context, callback, env) => {
 
   env.logger.info(`Persisting scanner with id: ${scannerId} and registration token: ${registrationToken}`);
   db.putItem(params).promise()
-  .then(() => {
-    const queryString = '?scannerId=' + scannerId;
+    .then(() => {
+      const queryString = '?scannerId=' + scannerId + '&registrationToken=' + registrationToken;
 
-    const response = {
-      scannerId: scannerId,
-      registrationToken: registrationToken,
-      pollingUrl: apiEndpoint + '/poll' + queryString,
-      inviteUrl: webEndpoint + '/register/' + queryString
-    };
+      const response = {
+        scannerId: scannerId,
+        registrationToken: registrationToken,
+        pollingUrl: apiEndpoint + '/poll' + queryString,
+        inviteUrl: webEndpoint + '/register/' + queryString
+      };
 
-    callback(null, response);
-  })
-  .catch(callback);
+      callback(null, response);
+    })
+    .catch(callback);
 });
