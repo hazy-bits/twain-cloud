@@ -1,0 +1,121 @@
+Outputs:
+  WebSiteBucket: 
+    Description: URL of TWAIN Cloud Web Site bucket
+    Value: 
+      Ref: WebSiteBucket
+  WebSiteUrl: 
+    Description: URL of TWAIN Cloud Web Site bucket
+    Value: 
+      "Fn::GetAtt": [ WebSiteBucket, WebsiteURL ]
+Resources:
+  WebSiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: ${self:provider.environment.TWAIN_WEBSITE_BUCKET}
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: 
+        Ref: WebSiteBucket
+      PolicyDocument:
+        Id: TwainCloudWebSiteAccessPolicy
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: arn:aws:s3:::${self:provider.environment.TWAIN_WEBSITE_BUCKET}/*
+  UploadBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: ${self:provider.environment.TWAIN_BUCKET}
+      AccessControl: Private
+      CorsConfiguration:
+        CorsRules:
+        - AllowedMethods:
+          - GET
+          - PUT
+          - POST
+          - HEAD
+          AllowedOrigins:
+          - "*"
+          AllowedHeaders:
+          - "*"
+
+  # TWAIN Cloud Tables
+  TwainScannersTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      TableName: ${self:provider.environment.TWAIN_SCANNERS_TABLE}
+
+  # Authentication Tables
+  CacheTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: token
+        AttributeType: S
+      - AttributeName: type
+        AttributeType: S
+      KeySchema:
+      - AttributeName: token
+        KeyType: HASH
+      - AttributeName: type
+        KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      TableName: ${self:provider.environment.CACHE_DB_NAME}
+
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: userId
+        AttributeType: S
+      KeySchema:
+      - AttributeName: userId
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      TableName: ${self:provider.environment.USERS_DB_NAME}
+
+  # Roles
+  GenerateIoTKeysRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ${self:provider.environment.TWAIN_IOT_ROLE}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              AWS: "*" # TODO: we need to restrict this somehow once we have better understanding of roles/policies
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: ["iot:Connect", "iot:Subscribe", "iot:Publish", "iot:Receive"]
+                Resource: "*" # TODO: looks like we give access to all IoT resrouces. Restrict this!

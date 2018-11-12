@@ -1,0 +1,179 @@
+# Registration APIs
+
+register:
+  handler: api-register/register.handler
+  events:
+    - http:
+        path: register
+        method: post
+        cors: ${file(./serverless.cors.yml)}
+        integration: lambda    
+
+poll:
+  handler: api-register/poll.handler
+  events:
+    - http:
+        path: poll
+        method: get
+        cors: ${file(./serverless.cors.yml)}
+        integration: lambda   
+
+claim:
+  handler: api-register/claim.handler
+  events:
+    - http:
+        path: claim
+        method: post
+        authorizer: ${file(./serverless.auth.yml)}
+        cors: ${file(./serverless.cors.yml)}
+        integration: lambda   
+
+# TWAIN Cloud APIs
+
+user:
+  handler: api-cloud/user.handler
+  events:
+    - http:
+        path: user
+        method: get
+        authorizer: ${file(./serverless.auth.yml)}
+        cors: ${file(./serverless.cors.yml)}
+        integration: lambda
+
+getScanners:
+  handler: api-cloud/getScanners.handler
+  events:
+    - http:
+        path: scanners
+        method: get
+        authorizer: ${file(./serverless.auth.yml)}
+        cors: ${file(./serverless.cors.yml)}
+        integration: lambda
+
+getScannerStatus:
+  handler: api-cloud/getScannerStatus.handler
+  events:
+    - http:
+        path: scanners/{scannerId}
+        method: get
+        authorizer: ${file(./serverless.auth.yml)}
+        cors: ${file(./serverless.cors.yml)}
+        integration: lambda
+
+deleteScanner:
+  handler: api-cloud/deleteScanner.handler
+  events:
+    - http:
+        path: scanners/{scannerId}
+        method: delete
+        authorizer: ${file(./serverless.auth.yml)}
+        cors: ${file(./serverless.cors.yml)}
+        integration: lambda
+
+uploadBlock:
+  handler: api-cloud/upload.handler
+  events:
+    - http:
+        path: scanners/{scannerId}/blocks
+        method: post
+        authorizer: ${file(./serverless.auth.yml)}
+        cors: ${file(./serverless.cors.yml)}
+        integration: lambda
+
+downloadBlock:
+  handler: api-cloud/download.handler
+  events:
+    - http:
+        path: scanners/{scannerId}/blocks/{blockId}
+        method: get
+        authorizer: ${file(./serverless.auth.yml)}
+        cors: ${file(./serverless.cors.yml)}
+        integration: lambda
+
+scannerEventHandler:
+  handler: api-cloud/scannerEventHandler.handler
+  events:
+    - iot:
+        name: ${self:provider.environment.TWAIN_CLOUD_EVENT}
+        sql: "SELECT * FROM 'twain/scanners/+/toCloud'"
+        description: "TWAIN Cloud scanner event handler"
+
+# TWAIN Local APIs
+
+infoex:
+  handler: api-local/direct.handler
+  events:
+    - http:
+        path: scanners/{scannerId}/privet/infoex
+        method: get
+        authorizer: ${file(./serverless.auth.yml)}
+        cors: ${file(./serverless.cors.yml)}
+        integration: lambda
+        request:
+          parameters:
+            paths:
+              scannerId: true
+          template:
+            application/json: ${file(api-local/direct.req.vm)}
+
+session:
+  handler: api-local/direct.handler
+  events:
+    - http:
+        path: scanners/{scannerId}/privet/twaindirect/session
+        method: post
+        authorizer: ${file(./serverless.auth.yml)}
+        cors: ${file(./serverless.cors.yml)}
+        integration: lambda
+        request:
+          parameters:
+            paths:
+              scannerId: true
+          template:
+            application/json: ${file(api-local/direct.req.vm)}
+
+# Authentication APIs
+
+authorize:
+  handler: api-auth/handler.authorize  
+  
+signin:
+  handler: api-auth/handler.signin
+  memorySize: 256
+  timeout: 15
+  events:
+    - http:
+        path: authentication/signin/{provider}
+        method: get
+        integration: lambda-proxy
+        
+callback:
+  handler: api-auth/handler.callback
+  memorySize: 256
+  timeout: 15
+  events:
+    - http:
+        path: authentication/callback/{provider}
+        method: get
+        integration: lambda-proxy
+
+refresh:
+  handler: api-auth/handler.refresh
+  memorySize: 256
+  timeout: 15
+  events:
+    - http:
+        path: authentication/refresh/{refresh_token}
+        method: get
+        cors: true
+        integration: lambda
+        request:
+          template:
+            application/json: |
+              {
+                "refresh_token":"$input.params('refresh_token')",
+                "id":"$input.params('id')",
+                "state":"$input.params('state')",
+                "host":"$input.params().header.get('host')",
+                "stage":"$context.stage"
+              }
