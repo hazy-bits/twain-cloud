@@ -22,7 +22,7 @@ provider:
   name: aws
   runtime: nodejs8.10
   stage: ${opt:stage, 'dev'}
-  region: ${opt:stage, 'us-east-1'}
+  region: ${opt:region, 'us-east-1'}
   tracing: true # enable X-Ray tracing
 
   environment:
@@ -37,17 +37,20 @@ provider:
     USERS_DB_NAME: ${self:service}-users-${self:provider.stage}
 
     # TWAIN Cloud
-    TWAIN_BUCKET: twain-cloud-bucket-#{AWS::AccountId}
-    TWAIN_IOT_ROLE: "twain-role-iot"
+    TWAIN_BUCKET: twain-cloud-bucket-#{AWS::AccountId}-${self:provider.stage}
+    TWAIN_WEBSITE_BUCKET: twain-cloud-website-#{AWS::AccountId}-${self:provider.stage}
 
-    # TO BE CUSTOMIZED
+    TWAIN_IOT_ROLE: "twain-role-iot-${self:provider.stage}"
+    TWAIN_CLOUD_EVENT: "twain_cloud_event_${self:provider.stage}" # Minimum length of 1. Maximum length of 128. Pattern: ^[a-zA-Z0-9_]+$ 
+
+    # Enpoints
     TWAIN_IOT_ENDPOINT: ${self:custom.overrides.TWAIN_IOT_ENDPOINT}
     TWAIN_API: ${self:custom.overrides.TWAIN_API}
     TWAIN_WEB: ${self:custom.overrides.TWAIN_WEB}
 
     # Auth General
     REDIRECT_CLIENT_URI: ${self:provider.environment.TWAIN_WEB}
-    TOKEN_SECRET: token-secret-123
+    TOKEN_SECRET: ${self:custom.overrides.ACCESS_TOKEN_SECRET}
 
     # Auth Providers
     PROVIDER_FACEBOOK_ID: ${self:custom.overrides.PROVIDER_FACEBOOK_ID}
@@ -97,8 +100,7 @@ package:
     - .git/**
     - node_modules/**
 
-functions:
-
+functions: 
   # Registration APIs
 
   register:
@@ -195,10 +197,10 @@ functions:
     handler: api-cloud/scannerEventHandler.handler
     events:
       - iot:
-          name: "twainCloudEvent"
+          name: ${self:provider.environment.TWAIN_CLOUD_EVENT}
           sql: "SELECT * FROM 'twain/scanners/+/toCloud'"
           description: "TWAIN Cloud scanner event handler"
- 
+
   # TWAIN Local APIs
 
   infoex:
@@ -247,6 +249,7 @@ functions:
           path: authentication/signin/{provider}
           method: get
           integration: lambda-proxy
+          
   callback:
     handler: api-auth/handler.callback
     memorySize: 256
@@ -256,6 +259,7 @@ functions:
           path: authentication/callback/{provider}
           method: get
           integration: lambda-proxy
+
   refresh:
     handler: api-auth/handler.refresh
     memorySize: 256
@@ -277,9 +281,39 @@ functions:
                   "stage":"$context.stage"
                 }
 
-resources:
+resources: 
+  Outputs:
+    WebSiteBucket: 
+      Description: URL of TWAIN Cloud Web Site bucket
+      Value: 
+        Ref: WebSiteBucket
+    WebSiteUrl: 
+      Description: URL of TWAIN Cloud Web Site bucket
+      Value: 
+        "Fn::GetAtt": [ WebSiteBucket, WebsiteURL ]
   Resources:
-
+    WebSiteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.TWAIN_WEBSITE_BUCKET}
+        AccessControl: PublicRead
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: error.html
+    BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: 
+          Ref: WebSiteBucket
+        PolicyDocument:
+          Id: TwainCloudWebSiteAccessPolicy
+          Version: '2012-10-17'
+          Statement:
+            - Sid: PublicReadForGetBucketObjects
+              Effect: Allow
+              Principal: '*'
+              Action: 's3:GetObject'
+              Resource: arn:aws:s3:::${self:provider.environment.TWAIN_WEBSITE_BUCKET}/*
     UploadBucket:
       Type: AWS::S3::Bucket
       Properties:
@@ -300,7 +334,6 @@ resources:
     # TWAIN Cloud Tables
     TwainScannersTable:
       Type: 'AWS::DynamoDB::Table'
-      DeletionPolicy: Retain
       Properties:
         AttributeDefinitions:
           - AttributeName: id
@@ -309,8 +342,8 @@ resources:
           - AttributeName: id
             KeyType: HASH
         ProvisionedThroughput:
-          ReadCapacityUnits: 5
-          WriteCapacityUnits: 5
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
         TableName: ${self:provider.environment.TWAIN_SCANNERS_TABLE}
 
     # Authentication Tables
@@ -370,4 +403,3 @@ resources:
                   Effect: "Allow"
                   Action: ["iot:Connect", "iot:Subscribe", "iot:Publish", "iot:Receive"]
                   Resource: "*" # TODO: looks like we give access to all IoT resrouces. Restrict this!
-        
