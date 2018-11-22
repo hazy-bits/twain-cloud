@@ -22,7 +22,8 @@ PROVIDER_FACEBOOK_SECRET: TODO
 PROVIDER_GOOGLE_ID: TODO
 PROVIDER_GOOGLE_SECRET: TODO
 
-# Access Token Secret
+# Access Token Secret is used to generate JWT tokens. Any arbitrary string would do.
+# Keep you secret in a safe place! 
 ACCESS_TOKEN_SECRET: TODO
 
 #endregion

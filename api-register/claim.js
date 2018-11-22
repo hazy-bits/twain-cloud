@@ -19,35 +19,35 @@ module.exports.handler = apiGatewayHandler((event, context, callback, env) => {
   };
 
   db.getItem(searchParams).promise()
-  .then(data => {
+    .then(data => {
 
-    const scanner = data.Item;
-    env.logger.info('retrieved scanner: ' + scanner);
+      const scanner = data.Item;
+      env.logger.info('retrieved scanner: ' + scanner);
 
-    if (scanner.registrationToken === claimInfo.registrationToken) {
-      const updateParams = {
-        TableName: scannersTable,
-        Key: {
-          'id': claimInfo.scannerId
-        },
-        UpdateExpression: 'SET clientId = :clientId REMOVE registrationToken',
-        ExpressionAttributeValues: { 
-          ':clientId': clientId 
-        },
-        ReturnValues: 'ALL_NEW'
-      };
-      
-      return db.updateItem(updateParams).promise()
-      .then(data => {
-        callback(null, data.Attributes);
-      });
-    }
-    else {
-      callback('invalid scanner id: ' + claimInfo.scannerId);
-    }
-  })
-  .catch(err => {
-    env.logger.error(err);
-    callback(err);
-  });
+      if (scanner.registrationToken === claimInfo.registrationToken) {
+        const updateParams = {
+          TableName: scannersTable,
+          Key: {
+            'id': claimInfo.scannerId
+          },
+          UpdateExpression: 'SET clientId = :clientId REMOVE registrationToken',
+          ExpressionAttributeValues: { 
+            ':clientId': clientId 
+          },
+          ReturnValues: 'ALL_NEW'
+        };
+        
+        return db.updateItem(updateParams).promise()
+          .then(data => {
+            callback(null, data.Attributes);
+          });
+      }
+      else {
+        callback('invalid scanner id: ' + claimInfo.scannerId);
+      }
+    })
+    .catch(err => {
+      env.logger.error(err);
+      callback(err);
+    });
 });

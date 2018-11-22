@@ -27,30 +27,30 @@ module.exports.handler = apiGatewayHandler((event, context, callback, env) => {
   };
 
   db.getItem(searchParams).promise()
-  .then(data => {
-    const scanner = data.Item;
+    .then(data => {
+      const scanner = data.Item;
 
-    if (!scanner) {
-      env.logger.warning('Nothing was found for provided scannerId: ' + scannerId);
-      throw data;
-    }
+      if (!scanner) {
+        env.logger.warning('Nothing was found for provided scannerId: ' + scannerId);
+        throw data;
+      }
 
-    if (!scanner.clientId) {
-      env.logger.warning('Scanner is not assigned to a client yet.');
-      throw data;
-    }
+      if (!scanner.clientId) {
+        env.logger.warning('Scanner is not assigned to a client yet.');
+        throw data;
+      }
 
-    return cache.saveRefreshToken(scannerId)
-    .then(token => {
-      const providerConfig = config({ provider: '', stage: event.stage });
-      const data = Object.assign(createResponseData(scannerId), { refreshToken: token });
-      const authorizationToken = utils.createToken(data.authorizationToken.payload, providerConfig.token_secret, data.authorizationToken.options);
-      callback(null, { success: true, authorizationToken, refreshToken: token });
+      return cache.saveRefreshToken(scannerId)
+        .then(token => {
+          const providerConfig = config({ provider: '', stage: event.stage });
+          const data = Object.assign(createResponseData(scannerId), { refreshToken: token });
+          const authorizationToken = utils.createToken(data.authorizationToken.payload, providerConfig.token_secret, data.authorizationToken.options);
+          callback(null, { success: true, authorizationToken, refreshToken: token });
+        });
+    })
+    .catch(error => {
+      env.logger.error(error);
+      callback(null, { success: false, message: 'Unknown scanner identifier' });
     });
-  })
-  .catch(error => {
-    env.logger.error(error);
-    callback(null, { success: false, message: 'Unknown scanner identifier' });
-  });
  
 });
